@@ -4,3 +4,4 @@
 fn main() {
     my_hanzi_app_lib::run()
 }
+

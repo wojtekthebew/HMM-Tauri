@@ -1,39 +1,281 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="styles.css" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
-    <script type="module" src="/main.js" defer></script>
-  </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structured Mnemonic Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="light">
+    <div class="container">
+        <div class="header">
+            <h1>Structured Mnemonic Generator</h1>
+            <div class="header-controls">
+                <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Theme</button>
+                <button class="backup-btn" onclick="manualBackup()">💾 Backup Now</button>
+            </div>
+        </div>
 
-  <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
+        <!-- Undo/Redo Controls -->
+        <div class="undo-redo">
+            <button class="undo-btn" onclick="undo()" id="undoBtn" disabled>↶ Undo</button>
+            <button class="redo-btn" onclick="redo()" id="redoBtn" disabled>↷ Redo</button>
+            <span class="help-text" style="margin-left: 15px;">💡 Press Ctrl+S to backup</span>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="openTab('actors', this)">Actors</button>
+            <button class="tab" onclick="openTab('sets', this)">Sets</button>
+            <button class="tab" onclick="openTab('props', this)">Props</button>
+            <button class="tab" onclick="openTab('characters', this)">Characters</button>
+        </div>
 
-      <div class="row">
-        <a href="https://tauri.app" target="_blank">
-          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a
-          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-          target="_blank"
-        >
-          <img
-            src="/assets/javascript.svg"
-            class="logo vanilla"
-            alt="JavaScript logo"
-          />
-        </a>
-      </div>
-      <p>Click on the Tauri logo to learn more about the framework</p>
+        <!-- Actors Tab -->
+        <div id="actors" class="tab-content active">
+            <h2>Actors</h2>
+            <div class="search-box">
+                <input type="text" id="actorSearch" placeholder="Search actors... (Press Escape to clear)" oninput="searchActors()">
+            </div>
+            <div class="form-grid">
+                <div>
+                    <h3 id="actorFormTitle">Add New Actor</h3>
+                    <form id="actorForm" onsubmit="saveActor(event)">
+                        <input type="hidden" id="actorId">
+                        <div class="form-group">
+                            <label>Name: <span class="required">*</span></label>
+                            <input type="text" id="actorName" required autofocus>
+                        </div>
+                        <div class="form-group">
+                            <label>Pinyin Initial:</label>
+                            <input type="text" id="actorPinyin">
+                            <div class="help-text">First letter of pinyin name for sorting</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Image:</label>
+                            <input type="file" id="actorImage" accept="image/*">
+                            <div class="help-text">Images will be optimized to 800px width</div>
+                            <div id="actorImagePreview" style="margin-top: 10px; max-width: 150px;"></div>
+                        </div>
+                        <button type="submit" id="actorSubmitBtn">Add Actor</button>
+                        <button type="button" onclick="cancelActorEdit()" id="actorCancelBtn" style="display: none; background: #6c757d;">Cancel</button>
+                    </form>
+                </div>
+            </div>
+            <div id="actorsList" class="item-list"></div>
+        </div>
 
-      <form class="row" id="greet-form">
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p id="greet-msg"></p>
-    </main>
-  </body>
+        <!-- Sets Tab -->
+        <div id="sets" class="tab-content">
+            <h2>Set Locations</h2>
+            <div class="search-box">
+                <input type="text" id="setSearch" placeholder="Search sets... (Press Escape to clear)" oninput="searchSets()">
+            </div>
+            <div class="form-grid">
+                <div>
+                    <h3 id="setFormTitle">Add New Set</h3>
+                    <form id="setForm" onsubmit="saveSet(event)">
+                        <input type="hidden" id="setId">
+                        <div class="form-group">
+                            <label>Name: <span class="required">*</span></label>
+                            <input type="text" id="setName" required autofocus>
+                        </div>
+                        <div class="form-group">
+                            <label>Tone Sections (JSON):</label>
+                            <textarea id="setTones" rows="4" placeholder='{"1": "Garden Area", "2": "Main Hall", "3": "Courtyard"}'></textarea>
+                            <div class="help-text">
+                                <strong>Shift+Enter</strong> for new line, 
+                                <strong>Enter</strong> to submit
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Image:</label>
+                            <input type="file" id="setImage" accept="image/*">
+                            <div class="help-text">Images will be optimized to 800px width</div>
+                            <div id="setImagePreview" style="margin-top: 10px; max-width: 150px;"></div>
+                        </div>
+                        <button type="submit" id="setSubmitBtn">Add Set</button>
+                        <button type="button" onclick="cancelSetEdit()" id="setCancelBtn" style="display: none; background: #6c757d;">Cancel</button>
+                    </form>
+                </div>
+            </div>
+            <div id="setsList" class="item-list"></div>
+        </div>
+
+        <!-- Props Tab -->
+        <div id="props" class="tab-content">
+            <h2>Props</h2>
+            <div class="search-box">
+                <input type="text" id="propSearch" placeholder="Search props... (Press Escape to clear)" oninput="searchProps()">
+            </div>
+            <div class="form-grid">
+                <div>
+                    <h3 id="propFormTitle">Add New Prop</h3>
+                    <form id="propForm" onsubmit="saveProp(event)">
+                        <input type="hidden" id="propId">
+                        <div class="form-group">
+                            <label>Name: <span class="required">*</span></label>
+                            <input type="text" id="propName" required autofocus>
+                        </div>
+                        <div class="form-group">
+                            <label>Category:</label>
+                            <select id="propCategory">
+                                <option value="general">General</option>
+                                <option value="weapon">Weapon</option>
+                                <option value="clothing">Clothing</option>
+                                <option value="artifact">Artifact</option>
+                                <option value="document">Document</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Components (comma separated):</label>
+                            <input type="text" id="propComponents">
+                            <div class="help-text">Separate multiple components with commas</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Image:</label>
+                            <input type="file" id="propImage" accept="image/*">
+                            <div class="help-text">Images will be optimized to 800px width</div>
+                            <div id="propImagePreview" style="margin-top: 10px; max-width: 150px;"></div>
+                        </div>
+                        <button type="submit" id="propSubmitBtn">Add Prop</button>
+                        <button type="button" onclick="cancelPropEdit()" id="propCancelBtn" style="display: none; background: #6c757d;">Cancel</button>
+                    </form>
+                </div>
+            </div>
+            <div id="propsList" class="item-list"></div>
+        </div>
+
+        <!-- Characters Tab -->
+        <div id="characters" class="tab-content">
+            <h2>Characters</h2>
+            
+            <!-- Advanced Search -->
+            <div class="advanced-search" id="characterAdvancedSearch" style="display: none;">
+                <h4>Advanced Search</h4>
+                <div class="search-fields">
+                    <input type="text" id="searchHanzi" placeholder="Hanzi...">
+                    <input type="text" id="searchPinyin" placeholder="Pinyin...">
+                    <input type="text" id="searchMeaning" placeholder="Meaning...">
+                    <select id="searchActor">
+                        <option value="">Any Actor</option>
+                    </select>
+                    <select id="searchSet">
+                        <option value="">Any Set</option>
+                    </select>
+                    <select id="searchProp">
+                        <option value="">Any Prop</option>
+                    </select>
+                </div>
+                <div class="search-actions">
+                    <button onclick="performAdvancedSearch()">Search</button>
+                    <button onclick="clearAdvancedSearch()" style="background: #6c757d;">Clear</button>
+                    <button onclick="toggleAdvancedSearch()" style="background: #6c757d;">Close</button>
+                </div>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="characterSearch" placeholder="Search characters... (Press Escape to clear)" oninput="searchCharacters()">
+                <button onclick="toggleAdvancedSearch()" style="margin-left: 10px;">Advanced Search</button>
+            </div>
+            
+            <div class="form-grid">
+                <div>
+                    <button onclick="initializeSampleData()" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+    Initialize Sample Data
+</button>
+<button onclick="console.log('Current DATA:', DATA)" style="position: fixed; top: 50px; right: 10px; z-index: 1000;">
+    Log Data to Console
+</button>
+                    <h3 id="characterFormTitle">Add New Character</h3>
+                    <form id="characterForm" onsubmit="saveCharacter(event)">
+                        <input type="hidden" id="characterId">
+                        <div class="form-group">
+                            <label>Hanzi: <span class="required">*</span></label>
+                            <input type="text" id="charHanzi" required autofocus>
+                        </div>
+                        <div class="form-group">
+                            <label>Pinyin: <span class="required">*</span></label>
+                            <input type="text" id="charPinyin" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Meaning: <span class="required">*</span></label>
+                            <input type="text" id="charMeaning" required>
+                        </div>
+                        <div class="form-group-with-add">
+                            <label>Actor: <span class="required">*</span></label>
+                            <select id="charActor" required></select>
+                            <button type="button" class="quick-add-btn" onclick="openQuickAddModal('actor')">+</button>
+                        </div>
+                        <div class="form-group-with-add">
+                            <label>Set Location: <span class="required">*</span></label>
+                            <select id="charSet" required onchange="updateToneSections()"></select>
+                            <button type="button" class="quick-add-btn" onclick="openQuickAddModal('set')">+</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Tone Section:</label>
+                            <select id="charToneSection">
+                                <option value="">Select a set location first</option>
+                            </select>
+                            <div class="help-text">Tone sections are based on the selected set location</div>
+                        </div>
+                        <div class="form-group-with-add">
+                            <label>Props:</label>
+                            <select id="charProps" multiple size="5"></select>
+                            <button type="button" class="quick-add-btn" onclick="openQuickAddModal('prop')">+</button>
+                        </div>
+                        <div class="help-text">
+                            Use <strong>Arrow keys</strong> to navigate, 
+                            <strong>Space</strong> to toggle selection
+                        </div>
+                        <div class="form-group">
+                            <label>Plot/Story:</label>
+                            <textarea id="charPlot" rows="4" placeholder="Describe the mnemonic story or scene..."></textarea>
+                            <div class="help-text">
+                                <strong>Ctrl+Enter</strong> to submit
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Image:</label>
+                            <input type="file" id="charImage" accept="image/*">
+                            <div class="help-text">Images will be optimized to 800px width</div>
+                            <div id="charImagePreview" style="margin-top: 10px; max-width: 150px;"></div>
+                        </div>
+                        <button type="submit" id="characterSubmitBtn">Add Character</button>
+                        <button type="button" onclick="cancelCharacterEdit()" id="characterCancelBtn" style="display: none; background: #6c757d;">Cancel</button>
+                    </form>
+                </div>
+            </div>
+            <div id="charactersList" class="item-list"></div>
+        </div>
+    </div>
+
+    <!-- Quick Add Modals -->
+    <div id="quickAddModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="quickAddModalTitle">Quick Add</h3>
+                <span class="close" onclick="closeQuickAddModal()">&times;</span>
+            </div>
+            <form id="quickAddForm" onsubmit="saveQuickAddItem(event)">
+                <div id="quickAddFormContent">
+                    <!-- Dynamic form content will be inserted here -->
+                </div>
+                <button type="submit">Add</button>
+                <button type="button" onclick="closeQuickAddModal()" style="background: #6c757d;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+      <script>
+        // Wait for Tauri to be ready
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!window.__TAURI__) {
+                console.warn('⚠️ Tauri API not detected - using fallback mode');
+            } else {
+                console.log('✅ Tauri API loaded successfully!');
+            }
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
 </html>
